@@ -10,7 +10,7 @@ const questions: string[] = [
   "Tell me about the things you did during your summer break in childhood."
 ];
 
-const Home: React.FC = () => {
+const Page: React.FC = () => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
   const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
   const [isListening, setIsListening] = useState<boolean>(false);
@@ -88,4 +88,4 @@ const Home: React.FC = () => {
   );
 };
 
-export default Home;
+export default Page;
