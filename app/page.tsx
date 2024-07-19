@@ -1,15 +1,27 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { useReactMediaRecorder } from 'react-media-recorder';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
+import dynamic from 'next/dynamic';
 import styles from './page.module.css';
-import Image from 'next/image';
 
+// Define the questions
 const questions: string[] = [
   "Tell me something about the solar system?",
   "Tell me about the things you did during your summer break in childhood."
 ];
+
+// Define types for media recorder props and render props
+type ReactMediaRecorderHookProps = {
+  audio: boolean;
+};
+
+type ReactMediaRecorderRenderProps = {
+  startRecording: () => void;
+  stopRecording: () => void;
+  mediaBlobUrl: string | null;
+  clearBlobUrl: () => void;
+};
 
 const Home: React.FC = () => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
@@ -17,18 +29,20 @@ const Home: React.FC = () => {
   const [isListening, setIsListening] = useState<boolean>(false);
   const [transcript, setTranscript] = useState<string>("");
   const [feedback, setFeedback] = useState<string>("");
-
-  const {
-    startRecording,
-    stopRecording,
-    mediaBlobUrl,
-    clearBlobUrl
-  } = useReactMediaRecorder({ audio: true });
+  const [mediaRecorder, setMediaRecorder] = useState<ReactMediaRecorderRenderProps | null>(null);
 
   useEffect(() => {
-    if (mediaBlobUrl) {
-      const fetchData = async () => {
-        const response = await fetch(mediaBlobUrl);
+    const loadMediaRecorder = async () => {
+      const { useReactMediaRecorder } = await import('react-media-recorder');
+      setMediaRecorder(useReactMediaRecorder({ audio: true }));
+    };
+    loadMediaRecorder();
+  }, []);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      if (mediaRecorder && mediaRecorder.mediaBlobUrl) {
+        const response = await fetch(mediaRecorder.mediaBlobUrl);
         const blob = await response.blob();
         const formData = new FormData();
         formData.append('file', blob);
@@ -43,12 +57,14 @@ const Home: React.FC = () => {
         } catch (error) {
           console.error('Transcription error:', error);
         }
-      };
+      }
+    };
 
-      fetchData();
-      clearBlobUrl();
+    fetchData();
+    if (mediaRecorder) {
+      mediaRecorder.clearBlobUrl();
     }
-  }, [mediaBlobUrl]);
+  }, [mediaRecorder && mediaRecorder.mediaBlobUrl]);
 
   const askNextQuestion = () => {
     if (currentQuestionIndex < questions.length - 1) {
@@ -61,14 +77,18 @@ const Home: React.FC = () => {
   };
 
   const handleStartSpeaking = () => {
-    setIsListening(true);
-    setIsSpeaking(true);
-    startRecording();
+    if (mediaRecorder) {
+      setIsListening(true);
+      setIsSpeaking(true);
+      mediaRecorder.startRecording();
+    }
   };
 
   const handleStopSpeaking = () => {
-    stopRecording();
-    setIsSpeaking(false);
+    if (mediaRecorder) {
+      mediaRecorder.stopRecording();
+      setIsSpeaking(false);
+    }
   };
 
   return (
