@@ -2,26 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import dynamic from 'next/dynamic';
 import styles from './page.module.css';
+import { useDynamicReactMediaRecorder } from './useDynamicReactMediaRecorder';
 
-// Define the questions
 const questions: string[] = [
   "Tell me something about the solar system?",
   "Tell me about the things you did during your summer break in childhood."
 ];
-
-// Define types for media recorder props and render props
-type ReactMediaRecorderHookProps = {
-  audio: boolean;
-};
-
-type ReactMediaRecorderRenderProps = {
-  startRecording: () => void;
-  stopRecording: () => void;
-  mediaBlobUrl: string | null;
-  clearBlobUrl: () => void;
-};
 
 const Home: React.FC = () => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
@@ -29,19 +16,14 @@ const Home: React.FC = () => {
   const [isListening, setIsListening] = useState<boolean>(false);
   const [transcript, setTranscript] = useState<string>("");
   const [feedback, setFeedback] = useState<string>("");
-  const [mediaRecorder, setMediaRecorder] = useState<ReactMediaRecorderRenderProps | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
 
-  useEffect(() => {
-    const loadMediaRecorder = async () => {
-      const { useReactMediaRecorder } = await import('react-media-recorder');
-      setMediaRecorder(useReactMediaRecorder({ audio: true }));
-    };
-    loadMediaRecorder();
-  }, []);
+  const mediaRecorder = useDynamicReactMediaRecorder({ audio: true });
 
   useEffect(() => {
     const fetchData = async () => {
       if (mediaRecorder && mediaRecorder.mediaBlobUrl) {
+        setLoading(true);
         const response = await fetch(mediaRecorder.mediaBlobUrl);
         const blob = await response.blob();
         const formData = new FormData();
@@ -49,28 +31,26 @@ const Home: React.FC = () => {
 
         try {
           const res = await axios.post<{ transcription: string, chatgpt_response: string }>('https://api.ashish.quest/transcribe', formData);
-          console.log('Transcript:', res.data.transcription);
-          console.log('Feedback:', res.data.chatgpt_response);
           setFeedback(res.data.chatgpt_response);
           setTranscript(res.data.transcription);
           setIsListening(false);
         } catch (error) {
           console.error('Transcription error:', error);
+        } finally {
+          setLoading(false);
+          mediaRecorder.clearBlobUrl();
         }
       }
     };
 
     fetchData();
-    if (mediaRecorder) {
-      mediaRecorder.clearBlobUrl();
-    }
-  }, [mediaRecorder && mediaRecorder.mediaBlobUrl]);
+  }, [mediaRecorder, mediaRecorder?.mediaBlobUrl]);
 
   const askNextQuestion = () => {
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
-      setTranscript(""); // Clear previous transcript
-      setFeedback(""); // Clear previous feedback
+      setTranscript("");
+      setFeedback("");
     } else {
       console.log('All questions asked');
     }
@@ -99,6 +79,7 @@ const Home: React.FC = () => {
         <button className={styles.button} onClick={handleStartSpeaking} disabled={isSpeaking || isListening}>Start Speaking</button>
         {isSpeaking && <p className={styles.textBox}>System is listening...</p>}
         {isSpeaking && <button className={styles.button} onClick={handleStopSpeaking}>Stop Speaking</button>}
+        {loading && <p className={styles.textBox}>Processing...</p>}
         {transcript && <p className={styles.textBox}>Transcript: {transcript}</p>}
         {feedback && <p className={styles.textBox}>Feedback: {feedback}</p>}
         <button className={styles.button} onClick={askNextQuestion} disabled={isListening}>Next Question</button>
