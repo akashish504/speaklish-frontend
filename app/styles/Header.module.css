@@ -1,0 +1,25 @@
+.Header {
+    display: flex;
+    justify-content: space-between;
+    align-items: left;
+    background: #fff;
+    width: -webkit-fill-available;
+    position: relative;
+    padding-bottom: 10px;
+  }
+  
+.head_text {
+  font-size: 50px;
+  color: black;
+  transform: translateX(-50%); /* Adjust the position to exactly center */
+  position: absolute; /* Position it absolutely within the header */
+  left: 50%; /* Move to the center */
+  font-family: Quicksand, sans-serif;
+  text-shadow: 0 4px 4px rgba(41, 41, 40, .2);
+}
+
+
+.logo {
+  display: flex;
+  align-items: center;
+}
